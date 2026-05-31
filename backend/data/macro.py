@@ -18,8 +18,9 @@ MACRO_SERIES = {
 
 
 def get_macro_data() -> list:
-    FRED_API_KEY = os.getenv("FRED_API_KEY", "")
-    if not FRED_API_KEY or FRED_API_KEY == "your_key_here":
+    FRED_API_KEY = os.environ.get("FRED_API_KEY", "").strip()
+    print(f"FRED_API_KEY present: {bool(FRED_API_KEY)}, length: {len(FRED_API_KEY)}")
+    if not FRED_API_KEY or FRED_API_KEY in ("your_key_here", ""):
         return _get_macro_fallback()
 
     results = []
