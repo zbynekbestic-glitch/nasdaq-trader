@@ -1,35 +1,46 @@
 import os
 import json
 import base64
+import tempfile
 from pywebpush import webpush, WebPushException
-from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
-from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1, EllipticCurvePrivateKey
-from cryptography.hazmat.backends import default_backend
 
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
-_VAPID_PRIVATE_RAW = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_EMAIL = "mailto:zbynekbestic@gmail.com"
 
-
-def _get_private_key_pem() -> str:
-    key = _VAPID_PRIVATE_RAW.strip()
-    if not key:
-        return ""
-    # Pokud je to base64 DER formát, převeď na PEM
-    if not key.startswith("-----"):
-        try:
-            padding = '=' * (4 - len(key) % 4) if len(key) % 4 else ''
-            der = base64.urlsafe_b64decode(key + padding)
-            from cryptography.hazmat.primitives.serialization import load_der_private_key
-            pk = load_der_private_key(der, password=None, backend=default_backend())
-            return pk.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode()
-        except Exception as e:
-            print(f"Key conversion error: {e}")
-            return key
-    return key.replace("\\n", "\n")
-
-# In-memory store subscriptions
 _subscriptions: list = []
+_tmp_key_path = None
+
+
+def _get_private_key_path() -> str:
+    global _tmp_key_path
+    raw = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
+    if not raw:
+        return ""
+
+    # Pokud je base64 DER, převeď na PEM
+    if not raw.startswith("-----"):
+        try:
+            padding = '=' * (4 - len(raw) % 4) if len(raw) % 4 else ''
+            der = base64.urlsafe_b64decode(raw + padding)
+            from cryptography.hazmat.primitives.serialization import load_der_private_key, Encoding, PrivateFormat, NoEncryption
+            from cryptography.hazmat.backends import default_backend
+            pk = load_der_private_key(der, password=None, backend=default_backend())
+            pem = pk.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode()
+        except Exception as e:
+            print(f"DER conversion error: {e}")
+            pem = raw.replace("\\n", "\n")
+    else:
+        pem = raw.replace("\\n", "\n")
+
+    # Zapiš do temp souboru
+    if _tmp_key_path is None:
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False)
+        tmp.write(pem)
+        tmp.close()
+        _tmp_key_path = tmp.name
+        print(f"VAPID key written to {_tmp_key_path}")
+
+    return _tmp_key_path
 
 
 def add_subscription(subscription: dict):
@@ -45,9 +56,9 @@ def remove_subscription(endpoint: str):
 
 
 def send_push(title: str, body: str, url: str = "/"):
-    private_key = _get_private_key_pem()
-    if not private_key or not VAPID_PUBLIC_KEY:
-        print("Push skipped: missing VAPID keys")
+    key_path = _get_private_key_path()
+    if not key_path or not VAPID_PUBLIC_KEY:
+        print(f"Push skipped: key_path={bool(key_path)}, public={bool(VAPID_PUBLIC_KEY)}")
         return
 
     data = json.dumps({"title": title, "body": body, "url": url})
@@ -58,14 +69,14 @@ def send_push(title: str, body: str, url: str = "/"):
             webpush(
                 subscription_info=sub,
                 data=data,
-                vapid_private_key=private_key,
+                vapid_private_key=key_path,
                 vapid_claims={"sub": VAPID_EMAIL},
             )
+            print(f"Push sent to {sub.get('endpoint', '')[:50]}")
         except WebPushException as e:
+            print(f"WebPush error: {e}")
             if e.response and e.response.status_code in (404, 410):
                 dead.append(sub.get("endpoint"))
-            else:
-                print(f"Push error: {e}")
         except Exception as e:
             print(f"Push error: {e}")
 
