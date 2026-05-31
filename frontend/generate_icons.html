@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head><title>Icon Generator</title></head>
+<body>
+<canvas id="c192" width="192" height="192" style="display:none"></canvas>
+<canvas id="c512" width="512" height="512" style="display:none"></canvas>
+<p>Generating icons...</p>
+<script>
+function drawIcon(canvas) {
+  const ctx = canvas.getContext('2d');
+  const s = canvas.width;
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, s, s);
+  grad.addColorStop(0, '#0a0e1a');
+  grad.addColorStop(1, '#111827');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, s, s, s * 0.18);
+  ctx.fill();
+  // Chart line
+  ctx.strokeStyle = '#0ea5e9';
+  ctx.lineWidth = s * 0.04;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  const pts = [[0.15,0.72],[0.28,0.55],[0.42,0.63],[0.58,0.32],[0.72,0.42],[0.85,0.22]];
+  ctx.beginPath();
+  pts.forEach(([x,y], i) => {
+    const px = x * s, py = y * s;
+    i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+  });
+  ctx.stroke();
+  // Green dot at end
+  const last = pts[pts.length - 1];
+  ctx.fillStyle = '#00ff88';
+  ctx.beginPath();
+  ctx.arc(last[0]*s, last[1]*s, s*0.05, 0, Math.PI*2);
+  ctx.fill();
+  // Text
+  ctx.fillStyle = '#0ea5e9';
+  ctx.font = `bold ${s*0.14}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('NQ', s*0.5, s*0.92);
+}
+
+function download(canvas, name) {
+  const a = document.createElement('a');
+  a.download = name;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+const c192 = document.getElementById('c192');
+const c512 = document.getElementById('c512');
+drawIcon(c192);
+drawIcon(c512);
+
+document.body.innerHTML = `
+  <h3>Click to download icons</h3>
+  <p>Save both files into: <b>C:\\Trading FlashFund\\frontend\\</b></p>
+  <br>
+  <button onclick="download(document.getElementById('c192'), 'icon-192.png')">⬇ Download icon-192.png</button>
+  <button onclick="download(document.getElementById('c512'), 'icon-512.png')">⬇ Download icon-512.png</button>
+  <br><br>
+  <canvas id="c192" width="192" height="192"></canvas>
+  <canvas id="c512" width="512" height="512" style="width:192px;height:192px"></canvas>
+`;
+
+const canvases = document.querySelectorAll('canvas');
+canvases.forEach(drawIcon);
+</script>
+</body>
+</html>

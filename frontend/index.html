@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0ea5e9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NASDAQ">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="manifest" href="/static/manifest.json">
+<title>NASDAQ Trader</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Hlavička -->
+  <header>
+    <div class="header-left">
+      <span class="logo">⚡ NASDAQ</span>
+      <span id="market-status" class="market-badge">NAČÍTÁM...</span>
+    </div>
+    <div class="header-right">
+      <span id="last-update" class="update-time">--</span>
+      <button onclick="refreshAll()" class="btn-refresh">↻</button>
+      <span id="ws-status" class="ws-dot disconnected" title="Připojení">●</span>
+    </div>
+  </header>
+
+  <!-- Ticker breaking news -->
+  <div id="alerts-bar" class="alerts-bar hidden">
+    <div id="alerts-ticker"></div>
+  </div>
+
+  <!-- Mobilní navigace -->
+  <nav class="mobile-tabs">
+    <button class="tab-btn active" onclick="showTab('watchlist')" data-tab="watchlist">📊 Akcie</button>
+    <button class="tab-btn" onclick="showTab('news')" data-tab="news">🔴 Zprávy</button>
+    <button class="tab-btn" onclick="showTab('macro')" data-tab="macro">🏦 Makro</button>
+    <button class="tab-btn" onclick="showTab('alerts')" data-tab="alerts">🚨 Alerty</button>
+  </nav>
+
+  <!-- Hlavní mřížka -->
+  <div class="main-grid">
+
+    <!-- Watchlist -->
+    <section class="panel watchlist-panel tab-content active" id="tab-watchlist">
+      <h2>📊 Watchlist — Fundamenty</h2>
+      <div id="watchlist-table">
+        <div class="loading">Načítám akcie...</div>
+      </div>
+    </section>
+
+    <!-- Zpravodajský feed -->
+    <section class="panel news-panel tab-content" id="tab-news">
+      <h2>🔴 Živý zpravodajský feed <span id="news-count" class="badge">0</span></h2>
+      <div class="news-filters">
+        <button class="filter-btn active" onclick="filterNews('all', event)">Vše</button>
+        <button class="filter-btn" onclick="filterNews('HIGH', event)">🔥 Breaking</button>
+        <button class="filter-btn" onclick="filterNews('BULLISH', event)">🟢 Bullish</button>
+        <button class="filter-btn" onclick="filterNews('BEARISH', event)">🔴 Bearish</button>
+      </div>
+      <div id="news-feed">
+        <div class="loading">Načítám zprávy...</div>
+      </div>
+    </section>
+
+    <!-- Pravý sloupec -->
+    <div class="right-column">
+      <section class="panel macro-panel tab-content" id="tab-macro">
+        <h2>🏦 Makro ukazatele</h2>
+        <div id="macro-grid"><div class="loading">Načítám...</div></div>
+      </section>
+
+      <section class="panel alerts-panel tab-content" id="tab-alerts">
+        <h2>🚨 Tržní alerty</h2>
+        <div id="alerts-list"><div class="no-alerts">Zatím žádné alerty</div></div>
+      </section>
+
+      <section class="panel events-panel">
+        <h2>📅 Klíčové události</h2>
+        <div id="events-list"><div class="loading">Načítám...</div></div>
+      </section>
+    </div>
+
+  </div>
+
+  <!-- Banner instalace PWA -->
+  <div id="install-banner" class="install-banner hidden">
+    <span>📲 Nainstalovat jako appku na zařízení</span>
+    <button id="install-btn" onclick="installPWA()">Nainstalovat</button>
+    <button onclick="document.getElementById('install-banner').classList.add('hidden')">✕</button>
+  </div>
+
+  <!-- Detail akcie (modal) -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

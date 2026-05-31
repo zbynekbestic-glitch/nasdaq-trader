@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"C:\\\\Trading FlashFund\\\\backend\"; Start-Process py -ArgumentList \"-m uvicorn main:app --host 0.0.0.0 --port 8000\" -NoNewWindow; Start-Sleep 5; try { $r = Invoke-WebRequest http://localhost:8000 -TimeoutSec 5; \"Status: $\\($r.StatusCode\\)\" } catch { \"Server not ready: $_\" })",
+      "PowerShell(py -m pip install \"yfinance==0.2.43\" --force-reinstall 2>&1)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Write-Host \"Port cleared\")"
+    ]
+  }
+}
