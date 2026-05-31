@@ -2,7 +2,6 @@ import requests
 import os
 from datetime import datetime, timedelta
 
-FRED_API_KEY = os.getenv("FRED_API_KEY", "")
 FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 
 # Klíčové makro ukazatele pro NASDAQ
@@ -19,6 +18,7 @@ MACRO_SERIES = {
 
 
 def get_macro_data() -> list:
+    FRED_API_KEY = os.getenv("FRED_API_KEY", "")
     if not FRED_API_KEY or FRED_API_KEY == "your_key_here":
         return _get_macro_fallback()
 
@@ -29,7 +29,7 @@ def get_macro_data() -> list:
                 FRED_BASE,
                 params={
                     "series_id": series_id,
-                    "api_key": FRED_API_KEY,
+                    "api_key": os.getenv("FRED_API_KEY", ""),
                     "file_type": "json",
                     "limit": 2,
                     "sort_order": "desc",
