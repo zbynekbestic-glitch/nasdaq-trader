@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-load_dotenv(dotenv_path="../.env")
+load_dotenv(dotenv_path="../.env", override=False)  # Railway env vars mají přednost
 
 import os, certifi
 os.environ['SSL_CERT_FILE'] = certifi.where()
