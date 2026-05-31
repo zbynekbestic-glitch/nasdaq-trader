@@ -66,51 +66,63 @@ async def broadcast(message: dict):
 
 
 async def refresh_fundamentals():
-    data = get_all_fundamentals()
-    _cache["fundamentals"] = data
-    await broadcast({"type": "fundamentals", "data": data})
+    try:
+        data = get_all_fundamentals()
+        if data:
+            _cache["fundamentals"] = data
+        await broadcast({"type": "fundamentals", "data": _cache["fundamentals"]})
+    except Exception as e:
+        print(f"refresh_fundamentals error: {e}")
 
 
 async def refresh_news():
-    articles = get_all_news()
-    enriched = []
-    for art in articles[:15]:  # AI analýza jen pro top 15
-        sentiment = analyze_news_sentiment(
-            art["title"], art["summary"], art["related_tickers"]
-        )
-        art["ai"] = sentiment
-
-        # Vytvoř alert pro vysoký dopad
-        if sentiment.get("impact") == "HIGH" or art.get("is_breaking"):
-            alert = {
-                "time": datetime.now().strftime("%H:%M:%S"),
-                "title": art["title"],
-                "sentiment": sentiment.get("sentiment", "NEUTRAL"),
-                "action": sentiment.get("action", "WATCH"),
-                "tickers": sentiment.get("affected_tickers", []),
-                "source": art["source"],
-            }
-            _cache["alerts"].insert(0, alert)
-            _cache["alerts"] = _cache["alerts"][:20]  # max 20 alertů
-            await broadcast({"type": "alert", "data": alert})
-
-        enriched.append(art)
-
-    _cache["news"] = enriched
-    _cache["last_update"] = datetime.now().isoformat()
-    await broadcast({"type": "news", "data": enriched})
+    try:
+        articles = get_all_news()
+        enriched = []
+        for art in articles[:15]:
+            try:
+                sentiment = analyze_news_sentiment(
+                    art["title"], art["summary"], art["related_tickers"]
+                )
+                art["ai"] = sentiment
+                if sentiment.get("impact") == "HIGH" or art.get("is_breaking"):
+                    alert = {
+                        "time": datetime.now().strftime("%H:%M:%S"),
+                        "title": art["title"],
+                        "sentiment": sentiment.get("sentiment", "NEUTRAL"),
+                        "action": sentiment.get("action", "WATCH"),
+                        "tickers": sentiment.get("affected_tickers", []),
+                        "source": art["source"],
+                    }
+                    _cache["alerts"].insert(0, alert)
+                    _cache["alerts"] = _cache["alerts"][:20]
+                    await broadcast({"type": "alert", "data": alert})
+            except Exception as e:
+                print(f"news sentiment error: {e}")
+            enriched.append(art)
+        _cache["news"] = enriched
+        _cache["last_update"] = datetime.now().isoformat()
+        await broadcast({"type": "news", "data": _cache["news"]})
+    except Exception as e:
+        print(f"refresh_news error: {e}")
 
 
 async def refresh_macro():
-    data = get_macro_data()
-    enriched = []
-    for item in data:
-        if item.get("change") is not None and not item.get("error"):
-            ai = analyze_macro_impact(item["name"], item.get("value", 0), item.get("change", 0))
-            item["ai"] = ai
-        enriched.append(item)
-    _cache["macro"] = enriched
-    await broadcast({"type": "macro", "data": enriched})
+    try:
+        data = get_macro_data()
+        enriched = []
+        for item in data:
+            try:
+                if item.get("change") is not None and not item.get("error"):
+                    ai = analyze_macro_impact(item["name"], item.get("value", 0), item.get("change", 0))
+                    item["ai"] = ai
+            except Exception as e:
+                print(f"macro AI error: {e}")
+            enriched.append(item)
+        _cache["macro"] = enriched
+        await broadcast({"type": "macro", "data": enriched})
+    except Exception as e:
+        print(f"refresh_macro error: {e}")
 
 
 @app.on_event("startup")
