@@ -9,7 +9,7 @@ os.environ['CURL_CA_BUNDLE'] = certifi.where()
 import asyncio
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Set
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -117,9 +117,10 @@ async def refresh_macro():
 async def startup():
     # Scheduler — spustí se hned
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(refresh_fundamentals, "interval", minutes=5, id="fundamentals", next_run_time=datetime.now())
-    scheduler.add_job(refresh_news, "interval", minutes=2, id="news", next_run_time=datetime.now())
-    scheduler.add_job(refresh_macro, "interval", minutes=30, id="macro", next_run_time=datetime.now())
+    now = datetime.now()
+    scheduler.add_job(refresh_fundamentals, "interval", minutes=5, id="fundamentals", next_run_time=now + timedelta(seconds=5))
+    scheduler.add_job(refresh_news, "interval", minutes=2, id="news", next_run_time=now + timedelta(seconds=10))
+    scheduler.add_job(refresh_macro, "interval", minutes=30, id="macro", next_run_time=now + timedelta(seconds=15))
     scheduler.start()
 
 
