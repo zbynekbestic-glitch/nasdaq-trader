@@ -352,43 +352,70 @@ window.addEventListener('appinstalled', () => {
   document.getElementById('install-banner').classList.add('hidden');
 });
 
-// ─── Service Worker ───────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/sw.js')
-    .then(reg => console.log('SW registered', reg.scope))
-    .catch(err => console.warn('SW failed', err));
-}
+// ─── Service Worker + Push ────────────────────────────────────
+let _swReg = null;
 
-// ─── Notifications ────────────────────────────────────────────
-async function requestNotifications() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    await Notification.requestPermission();
+async function setupServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    _swReg = await navigator.serviceWorker.register('/static/sw.js');
+    console.log('SW registered');
+    await setupPushNotifications();
+  } catch (err) {
+    console.warn('SW failed', err);
   }
 }
 
-function sendNotification(title, body) {
-  if (Notification.permission === 'granted') {
-    new Notification(title, {
-      body,
-      icon: '/static/icon-192.png',
-      badge: '/static/icon-192.png',
+async function setupPushNotifications() {
+  if (!('PushManager' in window)) return;
+
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') return;
+
+  try {
+    // Získej VAPID public key ze serveru
+    const res = await fetch('/api/vapid-public-key');
+    const { key } = await res.json();
+    if (!key) return;
+
+    const existing = await _swReg.pushManager.getSubscription();
+    if (existing) {
+      await registerSubscription(existing);
+      return;
+    }
+
+    const sub = await _swReg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key),
     });
+
+    await registerSubscription(sub);
+    console.log('Push subscription created');
+  } catch (err) {
+    console.warn('Push setup failed', err);
   }
 }
 
-// Override addAlert to also send system notification
-const _origAddAlert = addAlert;
-window.addAlert = function(alert) {
-  _origAddAlert(alert);
-  if (document.hidden) {
-    sendNotification(
-      `${alert.sentiment} — ${alert.action.replace('_', ' ')}`,
-      alert.title
-    );
-  }
-};
+async function registerSubscription(sub) {
+  await fetch('/api/push/subscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sub.toJSON()),
+  });
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function requestNotifications() {
+  // handled by setupPushNotifications
+}
 
 // ─── Init ─────────────────────────────────────────────────────
 connectWS();
 loadEvents();
-requestNotifications();
+setupServiceWorker();

@@ -12,11 +12,12 @@ import os
 from datetime import datetime, timedelta
 from typing import Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from data.push_notifications import add_subscription, send_push, get_vapid_public_key
 
 from data.stocks import get_all_fundamentals, get_price_history
 from data.macro import get_macro_data, get_upcoming_events, get_macro_fallback
@@ -97,6 +98,11 @@ async def refresh_news():
                     _cache["alerts"].insert(0, alert)
                     _cache["alerts"] = _cache["alerts"][:20]
                     await broadcast({"type": "alert", "data": alert})
+                    # Push notifikace na telefon
+                    tickers_str = ", ".join(alert["tickers"][:3]) if alert["tickers"] else ""
+                    push_title = f"🔴 {alert['sentiment']} — {alert['action'].replace('_',' ')}"
+                    push_body = alert["title"][:100] + (f" [{tickers_str}]" if tickers_str else "")
+                    asyncio.create_task(asyncio.to_thread(send_push, push_title, push_body))
             except Exception as e:
                 print(f"news sentiment error: {e}")
             enriched.append(art)
@@ -187,6 +193,18 @@ async def api_refresh():
     asyncio.create_task(refresh_news())
     asyncio.create_task(refresh_fundamentals())
     return {"status": "refreshing"}
+
+
+@app.get("/api/vapid-public-key")
+async def api_vapid_key():
+    return {"key": get_vapid_public_key()}
+
+
+@app.post("/api/push/subscribe")
+async def api_push_subscribe(request: Request):
+    sub = await request.json()
+    add_subscription(sub)
+    return {"status": "subscribed"}
 
 
 @app.get("/")

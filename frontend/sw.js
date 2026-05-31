@@ -1,4 +1,4 @@
-const CACHE = 'nasdaq-v1';
+const CACHE = 'nasdaq-v2';
 const STATIC = ['/static/style.css', '/static/app.js', '/static/manifest.json'];
 
 self.addEventListener('install', e => {
@@ -14,9 +14,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // API + WS — vždy live
   if (e.request.url.includes('/api/') || e.request.url.includes('/ws')) return;
-
   e.respondWith(
     fetch(e.request)
       .then(res => {
@@ -28,25 +26,37 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// Push notifikace pro alerty
+// Push notifikace
 self.addEventListener('push', e => {
-  const data = e.data?.json() || {};
-  self.registration.showNotification(data.title || 'NASDAQ Alert', {
-    body: data.body || '',
-    icon: '/static/icon-192.png',
-    badge: '/static/icon-192.png',
-    vibrate: [200, 100, 200],
-    data: { url: data.url || '/' },
-    actions: [
-      { action: 'open', title: 'Open' },
-      { action: 'dismiss', title: 'Dismiss' }
-    ]
-  });
+  let data = { title: '⚡ NASDAQ Alert', body: 'Nová tržní událost' };
+  try { data = e.data.json(); } catch {}
+
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/static/icon-192.png',
+      badge: '/static/icon-192.png',
+      vibrate: [300, 100, 300],
+      requireInteraction: true,
+      data: { url: data.url || '/' },
+      actions: [
+        { action: 'open', title: '📊 Otevřít' },
+        { action: 'dismiss', title: 'Zavřít' }
+      ]
+    })
+  );
 });
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  if (e.action !== 'dismiss') {
-    clients.openWindow(e.notification.data.url);
-  }
+  if (e.action === 'dismiss') return;
+  e.waitUntil(
+    clients.matchAll({ type: 'window' }).then(list => {
+      for (const client of list) {
+        if (client.url.includes(self.location.origin) && 'focus' in client)
+          return client.focus();
+      }
+      return clients.openWindow(e.notification.data.url || '/');
+    })
+  );
 });
