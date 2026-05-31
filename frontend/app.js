@@ -1,4 +1,4 @@
-const WS_URL = `ws://${location.host}/ws`;
+const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 const API = '';
 
 let ws = null;
