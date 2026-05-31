@@ -195,6 +195,14 @@ async def api_refresh():
     return {"status": "refreshing"}
 
 
+@app.get("/api/push/test")
+async def api_push_test():
+    from data.push_notifications import send_push, _subscriptions
+    print(f"Testing push, subscriptions: {len(_subscriptions)}")
+    send_push("🔴 TEST ALERT", "NVDA +5% — earnings beat expectations!", "/")
+    return {"status": "sent", "subscriptions": len(_subscriptions)}
+
+
 @app.get("/api/vapid-public-key")
 async def api_vapid_key():
     return {"key": get_vapid_public_key()}
