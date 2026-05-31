@@ -1,10 +1,32 @@
 import os
 import json
+import base64
 from pywebpush import webpush, WebPushException
+from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
+from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1, EllipticCurvePrivateKey
+from cryptography.hazmat.backends import default_backend
 
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
-VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "").replace("\\n", "\n")
+_VAPID_PRIVATE_RAW = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_EMAIL = "mailto:zbynekbestic@gmail.com"
+
+
+def _get_private_key_pem() -> str:
+    key = _VAPID_PRIVATE_RAW.strip()
+    if not key:
+        return ""
+    # Pokud je to base64 DER formát, převeď na PEM
+    if not key.startswith("-----"):
+        try:
+            padding = '=' * (4 - len(key) % 4) if len(key) % 4 else ''
+            der = base64.urlsafe_b64decode(key + padding)
+            from cryptography.hazmat.primitives.serialization import load_der_private_key
+            pk = load_der_private_key(der, password=None, backend=default_backend())
+            return pk.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode()
+        except Exception as e:
+            print(f"Key conversion error: {e}")
+            return key
+    return key.replace("\\n", "\n")
 
 # In-memory store subscriptions
 _subscriptions: list = []
@@ -23,7 +45,9 @@ def remove_subscription(endpoint: str):
 
 
 def send_push(title: str, body: str, url: str = "/"):
-    if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+    private_key = _get_private_key_pem()
+    if not private_key or not VAPID_PUBLIC_KEY:
+        print("Push skipped: missing VAPID keys")
         return
 
     data = json.dumps({"title": title, "body": body, "url": url})
@@ -34,7 +58,7 @@ def send_push(title: str, body: str, url: str = "/"):
             webpush(
                 subscription_info=sub,
                 data=data,
-                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_private_key=private_key,
                 vapid_claims={"sub": VAPID_EMAIL},
             )
         except WebPushException as e:
