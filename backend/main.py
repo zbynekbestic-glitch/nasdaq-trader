@@ -115,16 +115,11 @@ async def refresh_macro():
 
 @app.on_event("startup")
 async def startup():
-    # Initial load
-    await refresh_fundamentals()
-    await refresh_news()
-    await refresh_macro()
-
-    # Scheduler
+    # Scheduler — spustí se hned
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(refresh_fundamentals, "interval", minutes=5, id="fundamentals")
-    scheduler.add_job(refresh_news, "interval", minutes=2, id="news")
-    scheduler.add_job(refresh_macro, "interval", minutes=30, id="macro")
+    scheduler.add_job(refresh_fundamentals, "interval", minutes=5, id="fundamentals", next_run_time=datetime.now())
+    scheduler.add_job(refresh_news, "interval", minutes=2, id="news", next_run_time=datetime.now())
+    scheduler.add_job(refresh_macro, "interval", minutes=30, id="macro", next_run_time=datetime.now())
     scheduler.start()
 
 
