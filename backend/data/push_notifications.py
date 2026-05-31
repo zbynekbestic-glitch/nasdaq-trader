@@ -13,33 +13,29 @@ _tmp_key_path = None
 
 def _get_private_key_path() -> str:
     global _tmp_key_path
+    if _tmp_key_path:
+        return _tmp_key_path
+
     raw = os.environ.get("VAPID_PRIVATE_KEY", "").strip()
     if not raw:
+        print("VAPID_PRIVATE_KEY not set!")
         return ""
 
-    # Pokud je base64 DER, převeď na PEM
-    if not raw.startswith("-----"):
-        try:
-            padding = '=' * (4 - len(raw) % 4) if len(raw) % 4 else ''
-            der = base64.urlsafe_b64decode(raw + padding)
-            from cryptography.hazmat.primitives.serialization import load_der_private_key, Encoding, PrivateFormat, NoEncryption
-            from cryptography.hazmat.backends import default_backend
-            pk = load_der_private_key(der, password=None, backend=default_backend())
-            pem = pk.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode()
-        except Exception as e:
-            print(f"DER conversion error: {e}")
-            pem = raw.replace("\\n", "\n")
-    else:
+    # Dekóduj base64 PEM
+    try:
+        pem = base64.b64decode(raw).decode()
+        print(f"PEM decoded OK, starts with: {pem[:27]}")
+    except Exception:
+        # Fallback - zkus jako plain PEM
         pem = raw.replace("\\n", "\n")
+        print(f"Using raw PEM, starts with: {pem[:27]}")
 
     # Zapiš do temp souboru
-    if _tmp_key_path is None:
-        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False)
-        tmp.write(pem)
-        tmp.close()
-        _tmp_key_path = tmp.name
-        print(f"VAPID key written to {_tmp_key_path}")
-
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False)
+    tmp.write(pem)
+    tmp.close()
+    _tmp_key_path = tmp.name
+    print(f"VAPID key written to: {_tmp_key_path}")
     return _tmp_key_path
 
 
