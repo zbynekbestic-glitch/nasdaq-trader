@@ -360,17 +360,23 @@ async function setupServiceWorker() {
   try {
     _swReg = await navigator.serviceWorker.register('/static/sw.js');
     console.log('SW registered');
-    await setupPushNotifications();
+    // Zobraz banner pokud notifikace nejsou povoleny
+    if ('Notification' in window && Notification.permission === 'default') {
+      document.getElementById('notif-banner').classList.remove('hidden');
+    } else if (Notification.permission === 'granted') {
+      await setupPushNotifications();
+    }
   } catch (err) {
     console.warn('SW failed', err);
   }
 }
 
 async function setupPushNotifications() {
-  if (!('PushManager' in window)) return;
+  if (!('PushManager' in window)) { alert('Tvůj prohlížeč nepodporuje push notifikace.'); return; }
 
   const permission = await Notification.requestPermission();
-  if (permission !== 'granted') return;
+  document.getElementById('notif-banner').classList.add('hidden');
+  if (permission !== 'granted') { alert('Notifikace nebyly povoleny.'); return; }
 
   try {
     // Získej VAPID public key ze serveru

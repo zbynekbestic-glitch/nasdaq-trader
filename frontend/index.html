@@ -86,6 +86,13 @@
 
   </div>
 
+  <!-- Banner notifikací -->
+  <div id="notif-banner" class="install-banner hidden">
+    <span>🔔 Povolit push notifikace pro alerty?</span>
+    <button onclick="setupPushNotifications()">Povolit</button>
+    <button onclick="document.getElementById('notif-banner').classList.add('hidden')">✕</button>
+  </div>
+
   <!-- Banner instalace PWA -->
   <div id="install-banner" class="install-banner hidden">
     <span>📲 Nainstalovat jako appku na zařízení</span>
