@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from data.stocks import get_all_fundamentals, get_price_history
-from data.macro import get_macro_data, get_upcoming_events
+from data.macro import get_macro_data, get_upcoming_events, _get_macro_fallback
 from data.news import get_all_news
 from data.ai_analysis import analyze_news_sentiment, analyze_macro_impact
 
@@ -41,10 +41,10 @@ async def service_worker():
     from fastapi.responses import FileResponse as FR
     return FR(os.path.join(frontend_path, "sw.js"), media_type="application/javascript")
 
-# In-memory cache
+# In-memory cache — macro má hned fallback data
 _cache = {
     "fundamentals": [],
-    "macro": [],
+    "macro": _get_macro_fallback(),
     "news": [],
     "alerts": [],
     "last_update": None,
