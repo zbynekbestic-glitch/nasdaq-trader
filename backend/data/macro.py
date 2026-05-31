@@ -21,7 +21,7 @@ def get_macro_data() -> list:
     FRED_API_KEY = os.environ.get("FRED_API_KEY", "").strip()
     print(f"FRED_API_KEY present: {bool(FRED_API_KEY)}, length: {len(FRED_API_KEY)}")
     if not FRED_API_KEY or FRED_API_KEY in ("your_key_here", ""):
-        return _get_macro_fallback()
+        return get_macro_fallback()
 
     results = []
     for name, series_id in MACRO_SERIES.items():
@@ -58,7 +58,7 @@ def get_macro_data() -> list:
     return results
 
 
-def _get_macro_fallback() -> list:
+def get_macro_fallback() -> list:
     # Vrátí statická data pokud není FRED klíč — jako placeholder
     return [
         {"name": "Sazba Fedu", "value": 5.33, "previous": 5.33, "change": 0.0, "date": "2024-12-01", "trend": "flat", "note": "Přidej FRED API klíč pro živá data"},
